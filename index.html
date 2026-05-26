@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <title>Control de Ingresos & Egresos | Antony Romero</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <h2>Finanzas</h2>
+        <p class="sidebar-sub">Control personal</p>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="#" class="nav-link active" data-view="dashboard">
+          <i class="fas fa-chart-bar"></i> <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-link" data-view="transactions">
+          <i class="fas fa-list-ul"></i> <span>Movimientos</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+      <header class="main-header">
+        <div class="header-title">
+          <h1 id="page-title">Finanzas</h1>
+          <p id="page-subtitle">Ingresos y egresos</p>
+        </div>
+        <div class="header-actions">
+          <button id="refresh-data" class="btn-icon" title="Actualizar datos">
+            <i class="fas fa-sync-alt"></i>
+          </button>
+          <div class="sync-info-header" id="sync-info-header">
+            <i class="fas fa-cloud-download-alt"></i>
+            <span id="header-last-update">Sincronizando...</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- DASHBOARD VIEW -->
+      <div id="dashboard-view" class="view active">
+        <!-- KPI CARDS -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-info">
+              <span class="stat-label">Ingresos</span>
+              <span class="stat-value income-value" id="total-income">S/ 0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <span class="stat-label">Egresos</span>
+              <span class="stat-value expense-value" id="total-expense">S/ 0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <span class="stat-label">Balance</span>
+              <span class="stat-value balance-value" id="total-balance">S/ 0</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-info">
+              <span class="stat-label">Movimientos</span>
+              <span class="stat-value" id="total-transactions">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- GRÁFICO DE BARRAS -->
+        <div class="chart-collapsible" id="chart-collapsible">
+          <button class="collapsible-btn" id="toggle-chart-btn">
+            <i class="fas fa-chart-bar"></i>
+            <span>Ver evolución</span>
+            <i class="fas fa-chevron-down"></i>
+          </button>
+          <div class="collapsible-content" id="chart-content">
+            <div class="chart-box">
+              <div class="chart-header">
+                <h3>Comparativa mensual</h3>
+                <select id="period-select" class="period-select">
+                  <option value="week">Semana</option>
+                  <option value="month" selected>Mes</option>
+                  <option value="year">Año</option>
+                </select>
+              </div>
+              <div class="chart-container">
+                <canvas id="evolution-chart"></canvas>
+              </div>
+              <div class="chart-note">
+                <span class="note-ingreso"><i class="fas fa-square"></i> Ingresos</span>
+                <span class="note-egreso"><i class="fas fa-square"></i> Egresos</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ÚLTIMOS MOVIMIENTOS -->
+        <div class="recent-section">
+          <div class="section-header">
+            <h3>Últimos movimientos</h3>
+            <a href="#" class="view-all-link" data-view="transactions">Ver todos →</a>
+          </div>
+          <div class="recent-table-container">
+            <table class="recent-table">
+              <thead>
+                <tr><th>Fecha</th><th>Categoría</th><th>Monto</th></tr>
+              </thead>
+              <tbody id="recent-tbody">
+                <tr><td colspan="3" class="loading-text">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRANSACTIONS VIEW -->
+      <div id="transactions-view" class="view">
+        <!-- BOTÓN FILTROS MÓVIL -->
+        <div class="mobile-filter-bar">
+          <button id="open-filter-modal" class="btn-filter-mobile">
+            <i class="fas fa-sliders-h"></i>
+            <span>Filtros</span>
+            <span id="active-filters-badge" class="filters-badge" style="display: none;">0</span>
+          </button>
+          <button id="reset-filters-mobile" class="btn-secondary-mobile">
+            <i class="fas fa-undo-alt"></i>
+            <span>Limpiar</span>
+          </button>
+        </div>
+
+        <!-- MODAL FILTROS MEJORADO (BOTTOM SHEET) -->
+        <div id="filter-modal" class="modal">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3><i class="fas fa-filter"></i> Filtrar movimientos</h3>
+              <button id="close-filter-modal" class="modal-close">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+              <!-- Búsqueda -->
+              <div class="filter-field">
+                <label><i class="fas fa-search"></i> Buscar</label>
+                <div class="input-wrapper">
+                  <i class="fas fa-search input-icon"></i>
+                  <input type="text" id="search-input-mobile" placeholder="Descripción o categoría..." class="filter-input-mobile">
+                </div>
+              </div>
+
+              <!-- Tipo: Ingreso/Egreso (botones de selección) -->
+              <div class="filter-field">
+                <label><i class="fas fa-exchange-alt"></i> Tipo</label>
+                <div class="type-buttons-group">
+                  <button type="button" class="type-option active" data-type="all">
+                    <i class="fas fa-circle"></i> Todos
+                  </button>
+                  <button type="button" class="type-option" data-type="INGRESO">
+                    <i class="fas fa-arrow-up"></i> Ingresos
+                  </button>
+                  <button type="button" class="type-option" data-type="EGRESO">
+                    <i class="fas fa-arrow-down"></i> Egresos
+                  </button>
+                </div>
+              </div>
+
+              <!-- Categoría -->
+              <div class="filter-field">
+                <label><i class="fas fa-tag"></i> Categoría</label>
+                <div class="select-wrapper">
+                  <select id="category-filter-mobile" class="filter-select-mobile">
+                    <option value="all">Todas las categorías</option>
+                  </select>
+                  <i class="fas fa-chevron-down select-arrow"></i>
+                </div>
+              </div>
+
+              <!-- Método de pago -->
+              <div class="filter-field">
+                <label><i class="fas fa-credit-card"></i> Método</label>
+                <div class="select-wrapper">
+                  <select id="payment-filter-mobile" class="filter-select-mobile">
+                    <option value="all">Todos los métodos</option>
+                  </select>
+                  <i class="fas fa-chevron-down select-arrow"></i>
+                </div>
+              </div>
+
+              <!-- Resumen filtros activos -->
+              <div id="active-filters-summary" class="filters-summary"></div>
+            </div>
+
+            <div class="modal-footer">
+              <button id="apply-filters-mobile" class="btn-apply">
+                <i class="fas fa-check"></i> Aplicar filtros
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILTROS DESKTOP -->
+        <div class="filters-bar desktop-filters">
+          <div class="filter-group">
+            <i class="fas fa-search"></i>
+            <input type="text" id="search-input" placeholder="Buscar..." class="filter-input">
+          </div>
+          <div class="filter-group">
+            <select id="type-filter" class="filter-select">
+              <option value="all">Todos los tipos</option>
+              <option value="INGRESO">Ingresos</option>
+              <option value="EGRESO">Egresos</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <select id="category-filter" class="filter-select">
+              <option value="all">Todas las categorías</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <select id="payment-filter" class="filter-select">
+              <option value="all">Todos los métodos</option>
+            </select>
+          </div>
+          <button id="reset-filters" class="btn-secondary">Limpiar</button>
+        </div>
+
+        <!-- TABLA COMPLETA CON SCROLL -->
+        <div class="full-table-container">
+          <div class="table-wrapper">
+            <table class="full-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th><th>Tipo</th><th>Categoría</th><th>Descripción</th><th>Monto</th><th>Método</th>
+                </tr>
+              </thead>
+              <tbody id="full-tbody">
+                <tr><td colspan="6" class="loading-text">Cargando...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast-notification" class="toast"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
